@@ -1,0 +1,19 @@
+# Local profile. Run dbt with: dbt build --profiles-dir .
+# Dev = DuckDB (zero cost). Prod = Snowflake (set SNOWFLAKE_* env vars, then: dbt build --target prod).
+ae01_modern_data_stack:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('DUCKDB_PATH', '../warehouse.duckdb') }}"
+      threads: 4
+    prod:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT', '') }}"
+      user: "{{ env_var('SNOWFLAKE_USER', '') }}"
+      password: "{{ env_var('SNOWFLAKE_PASSWORD', '') }}"
+      role: "{{ env_var('SNOWFLAKE_ROLE', 'TRANSFORMER') }}"
+      database: "{{ env_var('SNOWFLAKE_DATABASE', 'ANALYTICS') }}"
+      warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE', 'COMPUTE_WH') }}"
+      schema: "{{ env_var('SNOWFLAKE_SCHEMA', 'DBT') }}"
+      threads: 4

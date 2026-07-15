@@ -1,0 +1,43 @@
+version: 2
+
+models:
+  - name: dim_tickers
+    description: "Ticker dimension — one row per ticker."
+    columns:
+      - name: ticker_key
+        description: "Surrogate key."
+        tests: [not_null, unique]
+      - name: ticker
+        description: "Natural key (ticker symbol)."
+        tests: [not_null, unique]
+
+  - name: dim_dates
+    description: "Date dimension built from the trading calendar present in the data."
+    columns:
+      - name: date_key
+        description: "Surrogate key."
+        tests: [not_null, unique]
+      - name: trade_date
+        description: "Trading date."
+        tests: [not_null, unique]
+
+  - name: fct_daily_prices
+    description: "Daily price fact. Grain: one row per ticker per trading day."
+    columns:
+      - name: daily_price_key
+        description: "Surrogate key (ticker + trade_date)."
+        tests: [not_null, unique]
+      - name: ticker_key
+        description: "FK to dim_tickers."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_tickers')
+              field: ticker_key
+      - name: date_key
+        description: "FK to dim_dates."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_dates')
+              field: date_key

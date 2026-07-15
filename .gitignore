@@ -1,0 +1,26 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Warehouse / data
+*.duckdb
+*.duckdb.wal
+data/raw/
+*.parquet
+
+# dlt
+.dlt/secrets.toml
+
+# dbt
+dbt_project/target/
+dbt_project/dbt_packages/
+dbt_project/logs/
+
+# Secrets / env
+.env
+*.env
+
+# OS / editor
+.DS_Store
+.vscode/

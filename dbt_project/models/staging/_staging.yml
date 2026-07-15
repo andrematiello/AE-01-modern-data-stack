@@ -1,0 +1,19 @@
+version: 2
+
+models:
+  - name: stg_market__prices
+    description: "Standardized daily OHLCV prices. Grain: one row per ticker per trading day."
+    columns:
+      - name: ticker
+        description: "Ticker symbol."
+        tests: [not_null]
+      - name: trade_date
+        description: "Trading date."
+        tests: [not_null]
+
+  - name: stg_market__tickers
+    description: "Standardized ticker metadata."
+    columns:
+      - name: ticker
+        description: "Ticker symbol (natural key)."
+        tests: [not_null, unique]

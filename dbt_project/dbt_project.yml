@@ -1,0 +1,16 @@
+name: 'ae01_modern_data_stack'
+version: '1.0.0'
+config-version: 2
+
+profile: 'ae01_modern_data_stack'
+
+model-paths: ["models"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  ae01_modern_data_stack:
+    staging:
+      +materialized: view
+    marts:
+      +materialized: table
