@@ -1,7 +1,6 @@
-dlt[duckdb]>=1.5
+dlt[duckdb,snowflake]>=1.5
 dbt-duckdb>=1.9
+dbt-snowflake>=1.9
 yfinance>=0.2.50
 duckdb>=1.1
 pandas>=2.2
-
-# For the Snowflake (prod) target, also install:  dbt-snowflake>=1.9

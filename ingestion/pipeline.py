@@ -1,11 +1,15 @@
-"""dlt ingestion — Yahoo Finance (yfinance) → DuckDB.
+"""dlt ingestion — Yahoo Finance (yfinance) → DuckDB (dev) or Snowflake (prod).
 
-Loads real daily OHLCV prices and ticker metadata into the `raw` schema of a local DuckDB warehouse.
+Loads real daily OHLCV prices and ticker metadata into the `raw` schema of the target warehouse.
 Prices use a merge write disposition (idempotent on ticker + date); metadata is replaced each run.
 Calls are wrapped in a bounded backoff to tolerate Yahoo rate limiting (HTTP 429).
 
+The destination mirrors the dbt target: warehouse portability means pointing *both* the ingestion
+and the transformation at the same warehouse — dbt alone cannot read sources that were never loaded.
+
 Run from the project root:
-    python ingestion/pipeline.py
+    python ingestion/pipeline.py                          # dev  → DuckDB
+    DESTINATION_TYPE=snowflake python ingestion/pipeline.py   # prod → Snowflake
 """
 from __future__ import annotations
 
@@ -21,7 +25,38 @@ PERIOD = "2y"
 
 # DuckDB file location, shared with dbt via DUCKDB_PATH so both read/write the same file.
 DUCKDB_PATH = os.environ.get("DUCKDB_PATH", "warehouse.duckdb")
-DESTINATION = dlt.destinations.duckdb(DUCKDB_PATH)
+DESTINATION_TYPE = os.environ.get("DESTINATION_TYPE", "duckdb").lower()
+
+
+def _build_destination():
+    """Select the dlt destination to match the dbt target (dev=DuckDB, prod=Snowflake).
+
+    Snowflake credentials come from SNOWFLAKE_* env vars — the same ones profiles.yml reads,
+    so a single set of exported variables drives both halves of the pipeline. Never hardcode them.
+    """
+    if DESTINATION_TYPE == "duckdb":
+        return dlt.destinations.duckdb(DUCKDB_PATH)
+
+    if DESTINATION_TYPE == "snowflake":
+        required = ["SNOWFLAKE_ACCOUNT", "SNOWFLAKE_USER", "SNOWFLAKE_PASSWORD"]
+        missing = [v for v in required if not os.environ.get(v)]
+        if missing:
+            raise SystemExit(f"DESTINATION_TYPE=snowflake requires: {', '.join(missing)}")
+        return dlt.destinations.snowflake(
+            credentials={
+                "database": os.environ.get("SNOWFLAKE_DATABASE", "ANALYTICS"),
+                "username": os.environ["SNOWFLAKE_USER"],
+                "password": os.environ["SNOWFLAKE_PASSWORD"],
+                "host": os.environ["SNOWFLAKE_ACCOUNT"],
+                "warehouse": os.environ.get("SNOWFLAKE_WAREHOUSE", "COMPUTE_WH"),
+                "role": os.environ.get("SNOWFLAKE_ROLE", "TRANSFORMER"),
+            }
+        )
+
+    raise SystemExit(f"Unknown DESTINATION_TYPE '{DESTINATION_TYPE}' (expected: duckdb | snowflake)")
+
+
+DESTINATION = _build_destination()
 
 
 def _with_retry(fn, attempts: int = 3, base_delay: float = 1.5):
@@ -82,6 +117,7 @@ def main() -> None:
         destination=DESTINATION,
         dataset_name="raw",
     )
+    print(f"Loading into destination: {DESTINATION_TYPE}")
     load_info = pipeline.run([prices(), tickers()])
     print(load_info)
 

@@ -1,17 +1,6 @@
 with prices as (
 
-    select * from {{ ref('stg_market__prices') }}
-
-),
-
-with_return as (
-
-    select
-        *,
-        (close_price
-            / nullif(lag(close_price) over (partition by ticker order by trade_date), 0)
-        ) - 1 as daily_return
-    from prices
+    select * from {{ ref('int_daily_prices_enriched') }}
 
 )
 
@@ -27,6 +16,6 @@ select
     p.close_price,
     p.volume,
     p.daily_return
-from with_return p
+from prices p
 inner join {{ ref('dim_tickers') }} t on p.ticker = t.ticker
 inner join {{ ref('dim_dates') }} d on p.trade_date = d.trade_date

@@ -1,0 +1,28 @@
+version: 2
+
+models:
+  - name: int_daily_prices_enriched
+    description: >
+      Daily prices with business logic applied. Adds daily_return as the close-over-previous-close
+      change per ticker. Grain: one row per ticker per trading day.
+    columns:
+      - name: ticker
+        description: "Ticker symbol."
+        tests: [not_null]
+      - name: trade_date
+        description: "Trading date."
+        tests: [not_null]
+      - name: daily_return
+        description: >
+          Close-to-close return versus the previous trading day for the same ticker.
+          Null on each ticker's first trading day, where no prior close exists.
+
+  - name: int_trading_calendar
+    description: >
+      Calendar attributes for every trading day present in the data. Built from the observed
+      trading dates rather than a full date spine, so it contains no non-trading days.
+      Grain: one row per trading day.
+    columns:
+      - name: trade_date
+        description: "Trading date (natural key)."
+        tests: [not_null, unique]

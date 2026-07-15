@@ -1,15 +1,14 @@
-with trading_dates as (
+with calendar as (
 
-    select distinct trade_date
-    from {{ ref('stg_market__prices') }}
+    select * from {{ ref('int_trading_calendar') }}
 
 )
 
 select
     {{ dbt_utils.generate_surrogate_key(['trade_date']) }} as date_key,
     trade_date,
-    extract(year  from trade_date) as year,
-    extract(month from trade_date) as month,
-    extract(day   from trade_date) as day,
-    extract(dow   from trade_date) as day_of_week
-from trading_dates
+    year,
+    month,
+    day,
+    day_of_week
+from calendar

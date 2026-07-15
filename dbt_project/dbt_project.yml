@@ -12,5 +12,7 @@ models:
   ae01_modern_data_stack:
     staging:
       +materialized: view
+    intermediate:
+      +materialized: view
     marts:
       +materialized: table
