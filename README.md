@@ -4,7 +4,8 @@
 > layered transformation with dbt, and a dimensional model ready for BI — built on **real stock-market
 > data** and portable from DuckDB (dev) to **Snowflake** (prod) with a single profile switch.
 
-![dbt lineage graph — add image here]
+**✅ Verified build:** `dbt build` → **23/23 tests passing** on real data — 10 tickers, ~2 years,
+**5,010** daily rows. *(Lineage graph screenshot to be added.)*
 
 ---
 
@@ -49,7 +50,8 @@ marts) → BI consumption.
 ## 🗂️ Data
 
 - **Source:** Yahoo Finance via `yfinance` (free, no API key) — daily OHLCV prices + ticker metadata
-  (name, sector, industry) for a basket of tickers.
+  (name, sector, industry) for a basket of 10 sector-diverse large caps.
+- **Volume (current build):** 10 tickers × ~2 years ≈ **5,010 daily price rows**.
 - **Grain of raw prices:** one row per ticker per trading day.
 - **Entities:** `prices` (time series), `tickers` (descriptive metadata).
 - **Known limitations:** adjusted vs. unadjusted close; corporate actions; occasional gaps for delisted
@@ -74,6 +76,19 @@ Star schema:
   volume, daily return).
 - **Dimensions:** `dim_tickers` (name, sector, industry), `dim_dates` (calendar attributes).
 - Grain and join keys documented in the model `.yml`.
+
+## ✅ Results (verified build)
+
+`dbt build` runs clean on real market data — **PASS=23, ERROR=0**:
+
+| Model | Rows | Grain |
+| --- | --- | --- |
+| `fct_daily_prices` | 5,010 | one row per ticker per trading day |
+| `dim_tickers` | 10 | one row per ticker |
+| `dim_dates` | 501 | one row per trading day |
+
+Tests: `not_null` + `unique` on every key and `relationships` from the fact to both dimensions —
+**23/23 passing**.
 
 ## 🤔 Design Decisions
 

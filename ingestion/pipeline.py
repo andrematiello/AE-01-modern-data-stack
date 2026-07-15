@@ -2,6 +2,7 @@
 
 Loads real daily OHLCV prices and ticker metadata into the `raw` schema of a local DuckDB warehouse.
 Prices use a merge write disposition (idempotent on ticker + date); metadata is replaced each run.
+Calls are wrapped in a bounded backoff to tolerate Yahoo rate limiting (HTTP 429).
 
 Run from the project root:
     python ingestion/pipeline.py
@@ -9,24 +10,42 @@ Run from the project root:
 from __future__ import annotations
 
 import os
+import time
 
 import dlt
 import yfinance as yf
 
 # A small, sector-diverse basket of large caps (enough to model, cheap to pull).
 TICKERS = ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "JPM", "XOM", "JNJ", "PG"]
+PERIOD = "2y"
 
-# DuckDB file location. Shared with dbt via the DUCKDB_PATH env var so both write/read the same file.
+# DuckDB file location, shared with dbt via DUCKDB_PATH so both read/write the same file.
 DUCKDB_PATH = os.environ.get("DUCKDB_PATH", "warehouse.duckdb")
 DESTINATION = dlt.destinations.duckdb(DUCKDB_PATH)
 
 
+def _with_retry(fn, attempts: int = 3, base_delay: float = 1.5):
+    """Call fn() with bounded linear backoff; tolerate transient Yahoo rate limiting (HTTP 429)."""
+    for attempt in range(attempts):
+        try:
+            result = fn()
+            if result is not None:
+                return result
+        except Exception:
+            pass
+        time.sleep(base_delay * (attempt + 1))
+    return None
+
+
 @dlt.resource(name="prices", write_disposition="merge", primary_key=("ticker", "date"))
-def prices(tickers: list[str] = TICKERS, period: str = "2y"):
+def prices():
     """Daily OHLCV per ticker. One record per ticker per trading day."""
-    for ticker in tickers:
-        history = yf.Ticker(ticker).history(period=period, interval="1d", auto_adjust=False)
-        if history.empty:
+    for ticker in TICKERS:
+        history = _with_retry(
+            lambda t=ticker: yf.Ticker(t).history(period=PERIOD, interval="1d", auto_adjust=False),
+            attempts=4,
+        )
+        if history is None or history.empty:
             continue
         history = history.reset_index()
         for row in history.itertuples(index=False):
@@ -40,19 +59,21 @@ def prices(tickers: list[str] = TICKERS, period: str = "2y"):
                 "close": float(row.Close),
                 "volume": int(row.Volume),
             }
+        time.sleep(1.0)
 
 
 @dlt.resource(name="tickers", write_disposition="replace")
-def tickers(ticker_list: list[str] = TICKERS):
+def tickers():
     """Descriptive metadata per ticker (name, sector, industry)."""
-    for ticker in ticker_list:
-        info = yf.Ticker(ticker).info or {}
+    for ticker in TICKERS:
+        info = _with_retry(lambda t=ticker: yf.Ticker(t).info, attempts=2) or {}
         yield {
             "ticker": ticker,
             "name": info.get("shortName") or info.get("longName") or ticker,
             "sector": info.get("sector"),
             "industry": info.get("industry"),
         }
+        time.sleep(0.5)
 
 
 def main() -> None:
