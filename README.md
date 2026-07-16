@@ -11,7 +11,7 @@
 
 **✅ Verified on both warehouses:** the same models run green on **DuckDB** (dev) *and* **Snowflake**
 (prod) — 7 models, 22 tests, 0 errors on each, same 5,010 / 501 / 10 rows. Portability is measured,
-not asserted: see [Warehouse portability, proven](#-warehouse-portability-proven).
+not asserted: see [Warehouse portability, proven](#️-warehouse-portability-proven).
 
 ---
 
@@ -67,7 +67,7 @@ warehouse. One codebase, two destinations.
 - [Methodology](#-methodology)
 - [Dimensional Model](#-dimensional-model)
 - [Results](#-results-verified-build)
-- [Warehouse portability, proven](#-warehouse-portability-proven)
+- [Warehouse portability, proven](#️-warehouse-portability-proven)
 - [Design Decisions](#-design-decisions)
 - [Tech Stack](#️-tech-stack)
 - [Repository Structure](#-repository-structure)
@@ -121,7 +121,8 @@ only the dbt profile would leave it querying a warehouse where the raw tables we
 2. **Staging (dbt):** one model per source table — rename, type, standardize. No joins here.
 3. **Intermediate (dbt):** business logic and enrichments — `daily_return`, calendar attributes.
 4. **Marts (dbt):** star schema — fact and dimension tables ready for BI.
-5. **Documentation & lineage:** `dbt docs` with model/column descriptions and the lineage graph above.
+5. **Documentation & lineage:** `dbt docs generate` builds the model/column dictionary and the lineage
+   graph straight from the code — run `dbt docs serve` to browse it.
 
 ## ⭐ Dimensional Model
 

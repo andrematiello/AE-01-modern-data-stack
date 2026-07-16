@@ -3,8 +3,8 @@
 Step-by-step guide. Estimated time: 3 weeks. This is the base project of the Analytics Engineering track —
 the other three evolve from it. Built on **real market data** (yfinance), portable DuckDB → Snowflake.
 
-**Status:** Phases 0–3 complete and verified. Phase 4 partly done (docs + lineage captured; the Snowflake
-prod run is the open item). Phase 5 verified locally, publication pending.
+**Status:** Phases 0–4 complete and verified, including the real Snowflake run. Phase 5: reproduction
+verified and the repo is public; only the write-up post is pending.
 
 ---
 
@@ -51,7 +51,14 @@ Verified: two consecutive runs both leave `raw.prices` at 5,010 rows with 0 dupl
 - [x] Column/model descriptions in the `.yml` — **AI drafts, human reviews** (see README)
 - [x] `dbt docs generate` runs and serves the model dictionary and lineage graph locally
 - [x] Diagrams for the README: `docs/cover.png` and `docs/architecture.png`
-- [ ] Run `dbt build --target prod` against the free trial and capture the evidence
+- [x] Run `dbt build --target prod` against Snowflake and capture the evidence
+
+**Checkpoint:** ✅ portability proven, not asserted. Both halves ran against Snowflake — dlt loaded the raw
+schema, then `dbt build --target prod` built the models there: **7 models, 22 tests, 0 errors**, same
+5,010 / 501 / 10 rows as DuckDB (`run_results.json` records `adapter_type: snowflake`, `target: prod`).
+Row-by-row over the overlapping window: `close_price` identical on all 5,000 rows; `volume` different on
+10 rows, all on the earlier load's last trading day — the source revising a session's volume after the
+close, ~22h between loads. The engines agree; the live source moved.
 
 ## Phase 5 — Publish (1 day)
 
