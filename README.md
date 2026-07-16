@@ -1,3 +1,5 @@
+![Modern Data Stack ELT — from raw market data to BI-ready dimensional models with dlt, dbt, DuckDB and Snowflake](docs/cover.png)
+
 # 🧩 Modern Data Stack End-to-End — ELT with dlt, dbt & DuckDB
 
 > A complete ELT pipeline on the modern Analytics Engineering stack: declarative ingestion with dlt,
