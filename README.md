@@ -7,12 +7,53 @@
 **✅ Verified build:** `dbt build` → **7 models + 22 tests, 0 errors** on real market data —
 10 tickers, ~2 years, **5,010** daily rows.
 
-![dbt lineage graph — raw sources through staging and intermediate to the star schema](docs/lineage.png)
+---
+
+## 🍳 In plain English (no tech background needed)
+
+**The analogy:** this is a **commercial kitchen**. Raw, messy ingredients go in one end; a plated dish comes
+out the other. This project is the whole kitchen — not the dish.
+
+**The problem it solves.** Say the business wants to answer *"did Apple stock go up or down on Tuesday?"*
+Raw market data arrives as a pile of loose numbers with unhelpful names, no structure, and it changes every
+day. If every analyst fetches that data themselves, each one arrives at a different answer — and nobody
+knows which is right. That's the classic failure: *three dashboards, three answers to the same question.*
+
+**What it delivers.** Three trustworthy tables that anyone can plug into a BI tool and chart **without
+writing a line of code**:
+
+| Table | What's in it |
+| --- | --- |
+| `fct_daily_prices` | **5,010 rows** — one per stock per day (open, close, volume, and how much it moved) |
+| `dim_tickers` | the **10 companies** (name, sector, industry) |
+| `dim_dates` | the **501 days** the market was actually open |
+
+That shape — one "facts" table in the middle, ringed by "description" tables — is called a **star schema**.
+It's the industry standard because it makes charts fast and questions easy: *"average return **by sector**"*
+becomes a click instead of a project.
+
+**The four steps, and the tool behind each:**
+
+| Step | What happens | Tool | Why that tool |
+| --- | --- | --- | --- |
+| 1. Fetch | Pulls daily prices for 10 stocks from Yahoo Finance | **dlt** | Knows how not to duplicate — run it twice and it's still 5,010 rows (verified) |
+| 2. Store | Lands the raw data in a "warehouse" | **DuckDB** (dev) / **Snowflake** (prod) | DuckDB is free and runs on a laptop; Snowflake is what companies actually run |
+| 3. Clean & organize | Renames, fixes types, computes returns, builds the star schema | **dbt** | Transformation as version-controlled SQL — every change is auditable in Git |
+| 4. Prove it's right | Runs 22 automatic checks on every build | **dbt tests** | If something breaks it fails immediately, instead of quietly becoming a wrong number on a dashboard |
+
+**The part that matters most, and that a non-technical reader wouldn't spot:** step 3 is split into **three
+layers** (`staging → intermediate → marts`), like an assembly line where each station does exactly one job.
+That isn't decoration — it's what lets someone else read the code and change it without breaking everything
+downstream. The architecture diagram below shows those layers.
+
+**Why it matters for a data team:** the same code runs on a laptop at zero cost and on a production cloud
+warehouse. One codebase, two destinations.
 
 ---
 
 ## 📋 Table of Contents
 
+- [In plain English](#-in-plain-english-no-tech-background-needed)
 - [Context](#-context)
 - [Business Problem](#-business-problem)
 - [Architecture](#️-architecture)
@@ -44,27 +85,7 @@ on both a zero-cost local warehouse and a production cloud warehouse?
 
 ## 🏗️ Architecture
 
-```mermaid
-flowchart LR
-    subgraph src["Source"]
-        Y["Yahoo Finance<br/>(yfinance)"]
-    end
-    subgraph el["Extract & Load"]
-        D["dlt<br/>merge on ticker+date"]
-    end
-    subgraph wh["Warehouse"]
-        DD["DuckDB<br/>(dev)"]
-        SF["Snowflake<br/>(prod)"]
-    end
-    subgraph t["Transform — dbt"]
-        S["staging<br/>rename · cast"]
-        I["intermediate<br/>business logic"]
-        M["marts<br/>star schema"]
-    end
-    B["BI / analysts"]
-
-    Y --> D --> DD & SF --> S --> I --> M --> B
-```
+![Project architecture: Yahoo Finance ingested by dlt into DuckDB (dev) or Snowflake (prod), transformed by dbt through staging, intermediate and marts into a BI-ready star schema](docs/architecture.png)
 
 **Warehouse portability is a property of the whole pipeline, not just dbt.** Both halves point at the same
 target: the dlt destination is selected by `DESTINATION_TYPE`, and dbt switches with `--target`. Swapping
