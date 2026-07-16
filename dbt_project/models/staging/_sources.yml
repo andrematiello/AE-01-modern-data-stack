@@ -3,7 +3,8 @@ version: 2
 sources:
   - name: raw
     description: "Raw market data loaded by dlt from Yahoo Finance (yfinance)."
-    schema: raw
+    # Mirrors RAW_SCHEMA in ingestion/pipeline.py — dbt must read the schema dlt wrote to.
+    schema: "{{ env_var('RAW_SCHEMA', 'raw') }}"
     tables:
       - name: prices
         description: "Daily OHLCV per ticker — one row per ticker per trading day."

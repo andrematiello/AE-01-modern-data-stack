@@ -9,6 +9,10 @@
 **✅ Verified build:** `dbt build` → **7 models + 22 tests, 0 errors** on real market data —
 10 tickers, ~2 years, **5,010** daily rows.
 
+**✅ Verified on both warehouses:** the same models run green on **DuckDB** (dev) *and* **Snowflake**
+(prod) — 7 models, 22 tests, 0 errors on each, same 5,010 / 501 / 10 rows. Portability is measured,
+not asserted: see [Warehouse portability, proven](#-warehouse-portability-proven).
+
 ---
 
 ## 🍳 In plain English (no tech background needed)
@@ -63,6 +67,7 @@ warehouse. One codebase, two destinations.
 - [Methodology](#-methodology)
 - [Dimensional Model](#-dimensional-model)
 - [Results](#-results-verified-build)
+- [Warehouse portability, proven](#-warehouse-portability-proven)
 - [Design Decisions](#-design-decisions)
 - [Tech Stack](#️-tech-stack)
 - [Repository Structure](#-repository-structure)
@@ -148,6 +153,32 @@ Tests: `not_null` + `unique` on every key and `relationships` from the fact to b
 > Counts come from `target/run_results.json` (`{'model': 7, 'test': 22}`), not from dbt's console summary —
 > the `Done. PASS=29` line sums models *and* tests, and reading it as a test count is an easy way to publish
 > a number that isn't true.
+
+## ❄️ Warehouse portability, proven
+
+The same project was run end-to-end against **both** warehouses — ingestion and transformation, not just a
+profile switch:
+
+| | DuckDB (dev) | Snowflake (prod) |
+| --- | --- | --- |
+| Ingestion | `python ingestion/pipeline.py` | `DESTINATION_TYPE=snowflake python ingestion/pipeline.py` |
+| Transformation | `dbt build` | `dbt build --target prod` |
+| Result | 7 models · 22 tests · **0 errors** | 7 models · 22 tests · **0 errors** |
+| `fct_daily_prices` | 5,010 | 5,010 |
+| `dim_dates` / `dim_tickers` | 501 / 10 | 501 / 10 |
+
+**The interesting part is where the two didn't match.** Comparing the marts row by row over the window
+present in both loads (5,000 rows):
+
+- `close_price`: **identical on all 5,000 rows** — the transformation is deterministic across engines.
+- `volume`: different on exactly **10 rows**, all on the *same* date — the last trading day of the earlier
+  load, one row per ticker, each revised slightly upward.
+
+That is not a pipeline bug: the two loads ran ~22 hours apart, and Yahoo consolidates a session's volume
+after the close. The live source moved; the code didn't. It also demonstrates the `period="2y"` rolling
+window in practice — the two loads cover `2024-07-15 → 2026-07-14` and `2024-07-16 → 2026-07-15`, the same
+5,010 rows over a window shifted by one day. Comparing engines on live data means pinning the window first,
+or you end up debugging the stock market instead of your SQL.
 
 ## 🤔 Design Decisions
 

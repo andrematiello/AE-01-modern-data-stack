@@ -27,6 +27,10 @@ PERIOD = "2y"
 DUCKDB_PATH = os.environ.get("DUCKDB_PATH", "warehouse.duckdb")
 DESTINATION_TYPE = os.environ.get("DESTINATION_TYPE", "duckdb").lower()
 
+# Schema that receives the raw load. dbt reads the same value in models/staging/_sources.yml,
+# so both halves stay pointed at one place when the warehouse is shared with other projects.
+RAW_SCHEMA = os.environ.get("RAW_SCHEMA", "raw")
+
 
 def _build_destination():
     """Select the dlt destination to match the dbt target (dev=DuckDB, prod=Snowflake).
@@ -115,9 +119,9 @@ def main() -> None:
     pipeline = dlt.pipeline(
         pipeline_name="market",
         destination=DESTINATION,
-        dataset_name="raw",
+        dataset_name=RAW_SCHEMA,
     )
-    print(f"Loading into destination: {DESTINATION_TYPE}")
+    print(f"Loading into destination: {DESTINATION_TYPE} (raw schema: {RAW_SCHEMA})")
     load_info = pipeline.run([prices(), tickers()])
     print(load_info)
 
