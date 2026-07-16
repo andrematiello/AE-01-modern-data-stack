@@ -49,7 +49,8 @@ Verified: two consecutive runs both leave `raw.prices` at 5,010 rows with 0 dupl
       cannot read sources that were never loaded into the cloud warehouse
 - [x] Document the DuckDB↔Snowflake switch (ingestion destination + dbt target, not a profile alone)
 - [x] Column/model descriptions in the `.yml` — **AI drafts, human reviews** (see README)
-- [x] `dbt docs generate` + capture the lineage graph for the README (`docs/lineage.png`)
+- [x] `dbt docs generate` runs and serves the model dictionary and lineage graph locally
+- [x] Diagrams for the README: `docs/cover.png` and `docs/architecture.png`
 - [ ] Run `dbt build --target prod` against the free trial and capture the evidence
 
 ## Phase 5 — Publish (1 day)
