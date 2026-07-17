@@ -10,6 +10,9 @@ and the transformation at the same warehouse — dbt alone cannot read sources t
 Run from the project root:
     python ingestion/pipeline.py                          # dev  → DuckDB
     DESTINATION_TYPE=snowflake python ingestion/pipeline.py   # prod → Snowflake
+
+Optional env vars: TICKERS (comma-separated), PERIOD, DLT_PIPELINE_NAME — defaults reproduce this
+project's standard run, so sibling projects can reuse the pipeline without touching its dlt state.
 """
 from __future__ import annotations
 
@@ -20,8 +23,13 @@ import dlt
 import yfinance as yf
 
 # A small, sector-diverse basket of large caps (enough to model, cheap to pull).
-TICKERS = ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "JPM", "XOM", "JNJ", "PG"]
-PERIOD = "2y"
+# Overridable via TICKERS (comma-separated) / PERIOD so other projects can reuse this pipeline.
+TICKERS = [
+    t.strip()
+    for t in os.environ.get("TICKERS", "AAPL,MSFT,GOOGL,AMZN,NVDA,META,JPM,XOM,JNJ,PG").split(",")
+    if t.strip()
+]
+PERIOD = os.environ.get("PERIOD", "2y")
 
 # DuckDB file location, shared with dbt via DUCKDB_PATH so both read/write the same file.
 DUCKDB_PATH = os.environ.get("DUCKDB_PATH", "warehouse.duckdb")
@@ -117,7 +125,9 @@ def tickers():
 
 def main() -> None:
     pipeline = dlt.pipeline(
-        pipeline_name="market",
+        # Overridable so a sibling project can run this pipeline against its own warehouse
+        # without touching this project's local dlt state.
+        pipeline_name=os.environ.get("DLT_PIPELINE_NAME", "market"),
         destination=DESTINATION,
         dataset_name=RAW_SCHEMA,
     )
